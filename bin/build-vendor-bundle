@@ -21,4 +21,4 @@ tar --transform "s@^@$NAME/@" \
     cpanfile \
     cpanfile.* \
     local \
-    vendor
+    uendor

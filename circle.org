@@ -1,7 +1,7 @@
 # -*- org-src-preserve-indentation: t; -*-
 #+PROPERTY: header-args :exports none
 
-bmo-systems repo is responsible for:
+harmony-systems repo is responsible for:
 
 1. generating tarballs of the perl dependencies ("vendor bundles")
 2. uploading the above to an amazon s3 bucket
@@ -19,15 +19,15 @@ bmo-systems repo is responsible for:
 
    #+BEGIN_SRC sh :exports code
    source /build/env.sh
-   git clone --depth 1 https://github.com/mozillabteam/bmo.git
-   cd bmo
+   git clone --depth 1 https://github.com/bugzilla/harmomy.git
+   cd harmomy
    cp ../cpanfile.snapshot .
    $PERL Makefile.PL
    make cpanfile GEN_CPANFILE_ARGS="-D bmo"
    $PERL $CARTON install
    #+END_SRC
 
-   After that, use 'docker cp' to copy /build/bmo/cpanfile and /build/bmo/cpanfile.snapshot to bundle/PLATFORM/ and commit them.
+   After that, use 'docker cp' to copy /build/harmomy/cpanfile and /build/harmomy/cpanfile.snapshot to bundle/PLATFORM/ and commit them.
 
 ** Upgrade perl dependencies
 
@@ -42,12 +42,8 @@ version: 2
 jobs:
   <<upload>>
   <<centos6>>
-  <<ubuntu14>>
-  <<bmo-base>>
-  <<bmo-ci>>
-  <<bmo-slim>>
+  <<harmony-slim>>
   <<docker-centos6>>
-  <<docker-ubuntu14>>
 
 workflows:
   version: 2
@@ -55,31 +51,18 @@ workflows:
     jobs:
       - docker-centos6:
           <<only master>>
-      - docker-ubuntu14:
-          <<only master>>
   bundles:
     jobs:
       - centos6:
           <<only master>>
-      - ubuntu14:
-          <<only master>>
-      - bmo-slim:
+      - harmony-slim:
           <<only master>>
           requires:
             - centos6
-      - bmo-base:
-          <<only master>>
-          requires:
-            - centos6
-      - bmo-ci:
-          <<only master>>
-          requires:
-            - bmo-base
       - upload:
           <<only master>>
           requires:
             - centos6
-            - ubuntu14
 #+END_SRC
 
 #+NAME: only master
@@ -90,18 +73,17 @@ filters:
 #+END_SRC
 
 * docker jobs
-jobs that build docker containers (bmo-base, bmo-ci, etc)
 
-** bmo-base
+** harmony-slim
 
-#+NAME: bmo-base
+#+NAME: harmony-slim
 #+BEGIN_SRC yaml
-bmo-base:
+harmony-slim:
   working_directory: /build
   docker:
     - image: docker:17.06.1-ce
       environment:
-        DOCKERHUB_REPO: mozillabteam/bmo-base
+        DOCKERHUB_REPO: bugzilla/harmony-slim
         PATH: /build/bin:/usr/local/sbin:/usr/sbin:/sbin:/usr/local/bin:/usr/bin:/bin
   steps:
     - setup_remote_docker
@@ -109,61 +91,15 @@ bmo-base:
     - attach_workspace:
         at: /build/upload
     - run:
-        no_output_timeout: 20m
-        working_directory: /build/docker/bmo-base
+        working_directory: /build/docker/harmony-slim
         command: |
-          tar -zxf /build/upload/bmo/vendor.tar.gz bmo/vendor/ bmo/cpanfile bmo/cpanfile.snapshot
-          docker-build
-#+END_SRC
-
-** bmo-ci
-
-#+NAME: bmo-ci
-#+BEGIN_SRC yaml
-bmo-ci:
-  working_directory: /build
-  docker:
-    - image: docker:17.06.1-ce
-      environment:
-        DOCKERHUB_REPO: mozillabteam/bmo-ci
-        PATH: /build/bin:/usr/local/sbin:/usr/sbin:/sbin:/usr/local/bin:/usr/bin:/bin
-  steps:
-    - setup_remote_docker
-    - checkout
-    - run:
-        working_directory: /build/docker/bmo-ci
-        command: |
-          docker-build
-    - run:
-        command: docker run -ti $DOCKERHUB_REPO env GITHUB_BASE_BRANCH=production TEST_SUITE=sanity runtests.sh
-#+END_SRC
-
-** bmo-slim
-
-#+NAME: bmo-slim
-#+BEGIN_SRC yaml
-bmo-slim:
-  working_directory: /build
-  docker:
-    - image: docker:17.06.1-ce
-      environment:
-        DOCKERHUB_REPO: mozillabteam/bmo-slim
-        PATH: /build/bin:/usr/local/sbin:/usr/sbin:/sbin:/usr/local/bin:/usr/bin:/bin
-  steps:
-    - setup_remote_docker
-    - checkout
-    - attach_workspace:
-        at: /build/upload
-    - run:
-        working_directory: /build/docker/bmo-slim
-        command: |
-          tar -zxf /build/upload/bmo/vendor.tar.gz \
-            bmo/vendor/bin \
-            bmo/local \
-            bmo/cpanfile \
-            bmo/cpanfile.snapshot \
-            bmo/LIBS.txt \
-            bmo/PACKAGES.txt
+          tar -zxf /build/upload/harmony/vendor.tar.gz \
+            harmony/vendor/bin \
+            harmony/local \
+            harmony/cpanfile \
+            harmony/cpanfile.snapshot \
+            harmony/LIBS.txt \
+            harmony/PACKAGES.txt
           docker-build
 
 #+END_SRC
@@ -210,11 +146,11 @@ docker-ubuntu14:
 
 * bundle jobs
 
-All the jobs below are used to build collections of the perl dependencies that BMO needs.
+All the jobs below are used to build collections of the perl dependencies that harmony needs.
 
 ** centos 6 job
 
-This job creates the 'bmo' bundle, which is for use on centos 6 or RHEL 6 machines.
+This job creates the 'harmony bundle, which is for use on centos 6 or RHEL 6 machines.
 This is what production, vagrant, CI, and so on use.
 
 #+NAME: centos6
@@ -225,35 +161,12 @@ centos6:
     - image: centos:6.9
       environment: 
         PATH: /build/bin:/usr/local/sbin:/usr/sbin:/sbin:/usr/local/bin:/usr/bin:/bin
-        NAME: bmo # named this for historical reasons
+        NAME: centos6
   steps:
     - checkout
     - run:
         name: install rpms
         command: /build/bundle/centos6/install-rpms
-    <<build_bundles>>
-#+END_SRC
-** ubuntu 14.04 job
-
-This job creates the 'mozreview' bundle, which is used by the version-control-tools bmoweb container.
-It is used for mozreview and probably some other systems and is a huge burden that makes me sad.
-
-#+NAME: ubuntu14
-#+BEGIN_SRC yaml :noweb yes
-ubuntu14:
-  working_directory: /build
-  docker:
-    - image: ubuntu:14.04
-      environment:
-        PATH: /build/bin:/usr/local/sbin:/usr/sbin:/sbin:/usr/local/bin:/usr/bin:/bin
-        NAME: mozreview # named this for historical reasons
-  steps:
-    - checkout
-    - run:
-        command: cp /build/bundle/ubuntu14/mysql.list /etc/apt/sources.list.d/mysql.list
-    - run:
-        name: install dependencies
-        command: /build/bundle/ubuntu14/install-debs
     <<build_bundles>>
 #+END_SRC
 
@@ -268,7 +181,7 @@ upload:
   docker:
     - image: alpine:latest
       environment:
-        S3_BUCKET: moz-devservices-bmocartons
+        S3_BUCKET: bugzilla-cartons
   steps:
     - run:
         command: |
