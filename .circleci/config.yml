@@ -81,7 +81,7 @@ jobs:
     docker:
       - image: docker:17.06.1-ce
         environment:
-          DOCKERHUB_REPO: mozillabteam/centos6
+          DOCKERHUB_REPO: bugzilla/centos6
           PATH: /build/bin:/usr/local/sbin:/usr/sbin:/sbin:/usr/local/bin:/usr/bin:/bin
     steps:
       - setup_remote_docker

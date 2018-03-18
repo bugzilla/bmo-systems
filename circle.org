@@ -13,7 +13,7 @@ harmony-systems repo is responsible for:
    Adding dependencies to BMO (or bugzilla in general) involves adding them to Makefile.PL.
    Getting these dependencies deployed to our infrastructure is more complicated.
 
-   For each type of bundle we produce, you need to run the docker container mozillabteam/PLATFORM.
+   For each type of bundle we produce, you need to run the docker container bugzilla/PLATFORM.
    Currently PLATFORM is centos6 and ubuntu14.
    From inside the container, run the following:
 
@@ -113,7 +113,7 @@ docker-centos6:
   docker:
     - image: docker:17.06.1-ce
       environment:
-        DOCKERHUB_REPO: mozillabteam/centos6
+        DOCKERHUB_REPO: bugzilla/centos6
         PATH: /build/bin:/usr/local/sbin:/usr/sbin:/sbin:/usr/local/bin:/usr/bin:/bin
   steps:
     - setup_remote_docker
@@ -122,26 +122,6 @@ docker-centos6:
         name: build docker container
         command: |
           docker-build -f bundle/centos6/Dockerfile
-#+END_SRC
-
-** docker-ubuntu14
-#+NAME: docker-ubuntu14
-#+BEGIN_SRC yaml
-docker-ubuntu14:
-  working_directory: /build
-  docker:
-    - image: docker:17.06.1-ce
-      environment:
-        DOCKERHUB_REPO: mozillabteam/ubuntu14
-        PATH: /build/bin:/usr/local/sbin:/usr/sbin:/sbin:/usr/local/bin:/usr/bin:/bin
-  steps:
-    - setup_remote_docker
-    - checkout
-    - run:
-        name: build docker container
-        command: |
-          docker-build -f bundle/ubuntu14/Dockerfile
-
 #+END_SRC
 
 * bundle jobs
