@@ -27,7 +27,7 @@ RUN yum update -y && \
 
 ENV PATH=/opt/rh/sclo-git25/root/usr/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin 
 
-COPY bmo/ /opt/bmo/
+COPY centos6/ /opt/bmo/
 
 RUN awk '{print $1}' < /app/LIBS.txt \
          | perl -nE 'chomp; unless (-f $_) { $missing++; say $_ } END { exit 1 if $missing }' && \
